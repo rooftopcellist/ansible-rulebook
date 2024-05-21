@@ -24,6 +24,16 @@ RUN dnf install -y java-17-openjdk-devel python3-pip postgresql-devel gcc python
 RUN bash -c "if [ $DEVEL_COLLECTION_LIBRARY -ne 0 ]; then \
     dnf install -y git; fi"
 
+# Set dir permissions again before python dependencies are installed
+RUN for dir in \
+      $APP_DIR/.local/bin \
+      /app/.local/bin \
+      /usr/lib/python3.9/ \
+      /usr/lib/python3.9/site-packages \
+      /usr/lib64/python3.9/ \
+      /usr/lib64/python3.9/site-packages ; \
+    do mkdir -m 0777 -p $dir ; chmod g+rwx $dir ; chgrp root $dir ; done
+
 USER $USER_ID
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ENV PATH="${PATH}:$APP_DIR/.local/bin"
@@ -42,9 +52,4 @@ RUN pip install -U pip \
 RUN bash -c "if [ $DEVEL_COLLECTION_LIBRARY -ne 0 ]; then \
     ansible-galaxy collection install ${DEVEL_COLLECTION_REPO} --force; fi"
 
-# Set permissions again after python dependencies are installed
-RUN chmod -R 0775 $APP_DIR \
-    && chown -R $USER_ID:root $APP_DIR
-
 RUN pip install .[production]
-
